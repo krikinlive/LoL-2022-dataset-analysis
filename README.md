@@ -42,7 +42,7 @@ player_cols = [
 ]
 ```
 ```
-study_df = lol_df.loc[lol_df["position"] != "team", player_cols] #Get rid of column teams so we do not deal with team rows
+study_df = lol_df.loc[lol_df["position"] != "team", player_cols].head() #Get rid of column teams so we do not deal with team rows
 study_df
 ```
 | gameid                | date                | league   |   year | split   |   playoffs |   patch | side   | position   | teamname          | playerid                                  | playername   |   gamelength |   kills |   goldat10 |   xpat10 |   csat10 |   killsat10 |   assistsat10 |   deathsat10 |   goldat15 |   xpat15 |   csat15 |   killsat15 |   assistsat15 |   deathsat15 |
