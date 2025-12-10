@@ -1,2 +1,2 @@
-# Leauge Of Legends 2022 Data Set Analysis
-This is the project I've been working for my class DSC80 at UCSD. The main theme of the project is to see how certain early game features can help predict the players final kill count.
+# Leauge Of Legends 2022 Data Set Analysis - How Can Early Game Features and Positions of The Players Help Us Predicit Their Final Kills
+by: Roman Lysenko; email: rlysenko@ucsd.edu
