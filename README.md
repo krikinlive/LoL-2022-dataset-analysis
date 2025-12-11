@@ -461,6 +461,29 @@ I'll be going over couple of the distributions I consider to be the most importa
     height="500"
     frameborder="0">
 </iframe>
+
+Next to look is the target column which is kills. 
+```
+base.groupby("position")["kills"].describe()[["mean", "std", "25%", "50%", "75%"]]
+```
+|     mean |     std |   25% |   50% |   75% |
+|---------:|--------:|------:|------:|------:|
+| 4.25788  | 3.24725 |     2 |     4 |     6 |
+| 3.09455  | 2.52282 |     1 |     3 |     4 |
+| 3.55021  | 2.76407 |     1 |     3 |     5 |
+| 0.895927 | 1.15068 |     0 |     1 |     1 |
+| 2.79931  | 2.41912 |     1 |     2 |     4 |
+
+<iframe
+    src="assets/hist_kills.html"
+    width="800"
+    height="500"
+    frameborder="0">
+</iframe>
+##### Position Relation to Kills:
+- Kills vary strongly by role: bot lane averages about 4.3 kills, mid about 3.6, jungle 3.1, top 2.8, while supports average <1 kill per game.
+- The 75th percentile for bot is 6 kills, compared to only 1 kill for support, showing that supports almost never get many kills even in the upper quartile.
+- These stats show us that the role in the game does strongly affect the amount of kills player will be receiving on average thus it would be import to include it in our model and one-hot code it
 ## Hypothesis Testing
 
 ## Framing a Prediction Problem
