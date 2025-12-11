@@ -455,7 +455,12 @@ Columns in base: 29
 | 2022-01-10 07:44:08 | LCKC     |   2022 | Spring  |          0 |   12.01 | Blue   | sup        |         1713 |       1 |       2678 |     2161 |       16 |           1 |             1 |            0 |       3836 |     3588 |       28 |           1 |             2 |            2 |          28.55 | False              | False              | False               | False              | False              | False                |
 #### Distribution and Histograms
 I'll be going over couple of the distributions I consider to be the most important from this graphs however the full list of all histograms you can find the folder called "assets" in the main repo. The first distribution I'll be looking at is the distribution of game_minutes and by looking at it it seems it was correct to assume that most of the games in LoL matches last around 30-35 minutes with very few last longer(around 40-50 do happen but rarely). Thus it seems appropriate to say that early game features at10 and midgame at 15.
-
+<iframe
+    src="assets/hist_game_minutes.html"
+    width="800"
+    height="500"
+    frameborder="0"
+></iframe></iframe>
 ## Hypothesis Testing
 
 ## Framing a Prediction Problem
