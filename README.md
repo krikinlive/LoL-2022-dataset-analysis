@@ -459,8 +459,8 @@ I'll be going over couple of the distributions I consider to be the most importa
     src="assets/hist_game_minutes.html"
     width="800"
     height="500"
-    frameborder="0"
-></iframe></iframe>
+    frameborder="0">
+</iframe>
 ## Hypothesis Testing
 
 ## Framing a Prediction Problem
