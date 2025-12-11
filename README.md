@@ -146,8 +146,6 @@ playername:  object 16
 Before looking at the graphs and looking at the distribution I first decided to asses the missigness because I think it is important to understand what is missing and what is going on with data before looking at the graphs, trying to find patterns and making any kind of analysis. I firstly splitted and created two lists one for numeric columns and one for categorical
 ```
 cat_cols_na = [
-    "split",
-    "teamname",
     "playerid",
     "playername"
 ]
@@ -351,7 +349,7 @@ Just in case to confirm that other features had the same list of leagues that ha
 ```
 #Lets double check and do the same for goldat15 and compare lists
 study_df["killsat15_missing"] = study_df["killsat15"].isna()
-league_cols_two = study_df.groupby("league")["goldat15_missing"].mean().sort_values(ascending=False)
+league_cols_two = study_df.groupby("league")["killsat15_missing"].mean().sort_values(ascending=False)
 list_of_league_na_two = list((league_cols_two == 1.0).index)
 list_of_league_na_two == list_of_league_na
 ```
@@ -360,6 +358,103 @@ True
 ```
 So my final thought would be: By grouping by league, I found several leagues (ASCI, DCup, LPL, …) where the proportion of missing goldat10 is 1.0, and others where it is 0.0. The same set of leagues has complete missingness for goldat15, which suggests that early-game snapshot stats are simply not logged in those leagues. Therefore, the missingness of goldat10 (and other *at10/*at15 stats) is best described as MAR with respect to league.
 #### Missgness For Categorical Columns
+```
+playerid:  object 2209
+playername:  object 16
+```
+Now knwoing what caused the missgness in the previous numeric features I decided to check why some of the playerid are missing and first to check its relation to leagues in league column:
+```
+study_df["playerid_missing"] = study_df["playerid"].isna()
+league_playerid = study_df.groupby("league")["playerid_missing"].mean().sort_values(ascending=False)
+league_playerid_na_list = list((league_playerid == 1.0).index)
+print(league_playerid_na_list)
+#So there seems to be missgness of some players ids in certain smaller league tournaments
+```
+```text
+['DCup', 'LAS', 'GLLPA', 'PRMP', 'ASCI', 'EBLPA', 'LPLOL', 'VL', 'GL', 'EBL', 'SL (LATAM)', 'CT', 'NLC Aurora Open', 'LJLA', 'ESLOL', 'IC', 'CDF', 'UPL', 'EL', 'TAL', 'PGC', 'LCL', 'LHE', 'HC', 'NEXO', 'LMF', 'DDH', 'VCS', 'LFL2', 'CBLOLA', 'GLL', 'TCL', 'LJL', 'PRM', 'LDL', 'PGN', 'EUM', 'LCO', 'UL', 'PCS', 'NLC', 'LCSA', 'USP', 'LFL', 'MSI', 'LVP SL', 'LPL', 'LLA', 'CBLOL', 'LEC', 'LCS', 'LCKC', 'LCK', 'HM', 'WLDs']
+```
+Seems like the history repeats itself and shows that indeed a lot of player's ids are simply missing in some of the league tournmanament. The conclusion I thought of is: "playerid is missing for some leagues probably because those competitions don’t use or expose stable numeric player IDs in the stats feed. It’s a logging/metadata issue, not an attendance or performance issue, and that would explain why only some of leagues have it missing. Which indicates to be the case for MAR.".
+Moving on to playername before checking on the league column again I wanted to see just how much of playername is available and how much is not:
+```
+#Now test why some teamname and playername is missing
+#Check how rare the missgness is
+for col in ["playername"]:
+    miss_col = col + "_missing"
+    study_df[miss_col] = study_df[col].isna()
+    print(f"\n=== {col} ===")
+    print(study_df[miss_col].value_counts())
+    print("proportion missing:", study_df[miss_col].mean())
+```
+```text
+=== playername ===
+playername_missing
+False    125474
+True         16
+Name: count, dtype: int64
+proportion missing: 0.0001275001992190613
+```
+The proportion seemed very, very small, however just in case I decided to see its missgness by league:
+```
+for col in ["playername", "teamname"]:
+    miss_col = col + "_missing"
+    print(f"\n=== {col} missingness by position ===")
+    print(
+        study_df.groupby("position")[miss_col]
+        .mean()
+        .sort_values(ascending=False)
+    )
+```
+```text
+=== playername missingness by position ===
+position
+mid    5.58e-04
+bot    7.97e-05
+jng    0.00e+00
+sup    0.00e+00
+top    0.00e+00
+Name: playername_missing, dtype: float64
+```
+Thoughts: The position scenario tells us that the numbers are so small(less than 0.1%) that There’s no meaningful pattern across roles: playername: a few missing mids/bots, literally zero for others → looks like random missgness. So, with respect to position, missingness looks MCAR (no systematic dependence). Conclusion: To conclude everything, the missgness is extremely rare, and has slightly concentrated in a few small leagues (potential loggin issues or restrign information). playername is missing for just 16 out of ~125k player-games. The missgnes is scatter among couple of columns such as kills and leagues with almost the same kills distributions as non-missing rows. It suggests that the missgness could be at random due to loggin issues or regestring issues on the servers in few tournaments(leagues) and not from any systematic dependence on player performance or in-game role. In other words, missingness in playername is best described as MAR given league, and effectively MCAR with respect to the main variables of interest (kills, position, early-game stats).
+## Data Cleaning and Exploratory Data Analysis Part: 2
+Now that I assesed the missgness time to finish the EDA, but before that I do quick cleaning for my data frame:
+```
+#Since we know that for *at10 and *at15 columns are missgness due to some leagues, it is better decision to get rid of them,
+#because we have no availiability to it
+# Columns we want for modeling (target + early-game features)
+target = "kills"
+
+num_feats_10 = ["goldat10", "xpat10", "csat10", "killsat10", "assistsat10", "deathsat10"]
+num_feats_15 = ["goldat15", "xpat15", "csat15", "killsat15", "assistsat15", "deathsat15"]
+
+core_cols = [target] + num_feats_10 + num_feats_15
+
+# 1. Start from full study_df and drop rows with missing core numeric values
+base = study_df.dropna(subset=core_cols).copy()
+
+# 2. Drop identifier / meta columns we won't use as features
+cols_to_drop = ["playerid", "playername", "teamname", "gameid"]
+
+for c in cols_to_drop:
+    if c in base.columns:
+        base = base.drop(columns=c)
+
+print("Rows in base:", len(base))
+print("Columns in base:", base.shape[1])
+base
+```
+```
+Rows in base: 106560
+Columns in base: 29
+```
+| date                | league   |   year | split   |   playoffs |   patch | side   | position   |   gamelength |   kills |   goldat10 |   xpat10 |   csat10 |   killsat10 |   assistsat10 |   deathsat10 |   goldat15 |   xpat15 |   csat15 |   killsat15 |   assistsat15 |   deathsat15 |   game_minutes | goldat10_missing   | goldat15_missing   | killsat15_missing   | teamname_missing   | playerid_missing   | playername_missing   |
+|:--------------------|:---------|-------:|:--------|-----------:|--------:|:-------|:-----------|-------------:|--------:|-----------:|---------:|---------:|------------:|--------------:|-------------:|-----------:|---------:|---------:|------------:|--------------:|-------------:|---------------:|:-------------------|:-------------------|:--------------------|:-------------------|:-------------------|:---------------------|
+| 2022-01-10 07:44:08 | LCKC     |   2022 | Spring  |          0 |   12.01 | Blue   | top        |         1713 |       2 |       3228 |     4909 |       89 |           0 |             0 |            0 |       5025 |     7560 |      135 |           0 |             1 |            0 |          28.55 | False              | False              | False               | False              | False              | False                |
+| 2022-01-10 07:44:08 | LCKC     |   2022 | Spring  |          0 |   12.01 | Blue   | jng        |         1713 |       2 |       3429 |     3484 |       58 |           1 |             2 |            0 |       5366 |     5320 |       89 |           2 |             3 |            2 |          28.55 | False              | False              | False               | False              | False              | False                |
+| 2022-01-10 07:44:08 | LCKC     |   2022 | Spring  |          0 |   12.01 | Blue   | mid        |         1713 |       2 |       3283 |     4556 |       81 |           0 |             1 |            0 |       5118 |     6942 |      120 |           0 |             3 |            0 |          28.55 | False              | False              | False               | False              | False              | False                |
+| 2022-01-10 07:44:08 | LCKC     |   2022 | Spring  |          0 |   12.01 | Blue   | bot        |         1713 |       2 |       3600 |     3103 |       78 |           1 |             1 |            0 |       5461 |     4591 |      115 |           2 |             1 |            2 |          28.55 | False              | False              | False               | False              | False              | False                |
+| 2022-01-10 07:44:08 | LCKC     |   2022 | Spring  |          0 |   12.01 | Blue   | sup        |         1713 |       1 |       2678 |     2161 |       16 |           1 |             1 |            0 |       3836 |     3588 |       28 |           1 |             2 |            2 |          28.55 | False              | False              | False               | False              | False              | False                |
+#### Distribution and Histograms
+
 ## Hypothesis Testing
 
 ## Framing a Prediction Problem
