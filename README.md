@@ -486,6 +486,38 @@ The kills are very skewed. Most players end the game with only a few kills: tall
 - Kills vary strongly by role: bot lane averages about 4.3 kills, mid about 3.6, jungle 3.1, top 2.8, while supports average <1 kill per game.
 - The 75th percentile for bot is 6 kills, compared to only 1 kill for support, showing that supports almost never get many kills even in the upper quartile.
 - These stats show us that the role in the game does strongly affect the amount of kills player will be receiving on average thus it would be import to include it in our model and one-hot code it
+##### Couple Other Mid Game Stats
+<iframe
+    src="assets/hist_killsat15.html"
+    width="800"
+    height="500"
+    frameborder="0">
+</iframe>
+<iframe
+    src="assets/hist_goldat15.html"
+    width="800"
+    height="500"
+    frameborder="0">
+</iframe>
+<iframe
+    src="assets/hist_xpat15.html"
+    width="800"
+    height="500"
+    frameborder="0">
+</iframe>
+
+- Gold (goldat15)
+    - Roughly bell-ish, centered around 3–3.5k at 10 and 5–5.5k at 15.
+    - The right tail gets heavier at 15 (some players up near 8–9k+, but rarely).
+    - Almost everyone has similar gold early, but as the game progresses, snowball games create huge leads for a small set of players.
+- XP (xpat15)
+    - Doesn't seem to have a complete bellish form and have around same distribution for between 5-6k and 7-8k.
+    - Less extreme tail than gold, which fits the idea that XP is more “controlled” while gold spikes a lot with kills.
+- CS (csat15)
+    - Clear multi-modal / lumpy shape: one group at very low CS, another much higher.
+    - The CS distributions are multi-modal, hinting that roles have systematically different farming patterns. This motivates stratifying by
+- Kills (killsat15)
+    - Heavily right-skewed, majority of players have almost no kills and a good chunk have around 1-2 kills with much smaller percentage 3-4 kills, and some outliers have 5-6 kills.
 ## Hypothesis Testing
 
 ## Framing a Prediction Problem
