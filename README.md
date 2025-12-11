@@ -731,6 +731,7 @@ assistsat15  corr =  0.0245,  p-value =  9.999e-05
         - Together, they form a simple but meaningful baseline that uses exactly the kind of information a coach or analyst would have at 15 minutes.
     - The Base and Improving models will all be tested using cross-validation technique.
 The Code:
+
 ```
 from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import KFold
@@ -738,7 +739,9 @@ from sklearn.metrics import mean_squared_error, r2_score
 # target
 y = base["kills"].to_numpy()
 ```
+
 Helper Function
+
 ```
 def cv_linreg_with_position(df, numeric_feats, n_splits=5, random_state=0):
     """
@@ -786,6 +789,7 @@ def cv_linreg_with_position(df, numeric_feats, n_splits=5, random_state=0):
 
     return np.mean(rmses), np.mean(r2s)
 ```
+
 ```
 feature_sets = [
     (["goldat15"], "baseline_gold15+pos"), # base line or base model, next are imporvements that could help the model
@@ -799,7 +803,9 @@ for feats, label in feature_sets:
     print(f"\n>>> Feature set label: {label}")
     cv_linreg_with_position(base, feats, n_splits=5, random_state=0)
 ```
+
 And so the base line model showed these results:
+
 ```text
 === Feature set: ['goldat15'] + position dummies ===
 Numeric features: ['goldat15']
@@ -812,7 +818,9 @@ Position dummies: ['pos_jng', 'pos_mid', 'pos_sup', 'pos_top']
   Mean RMSE = 2.193 (± 0.010)
   Mean R²   = 0.368 (± 0.007)
 ```
-And as adding more features the RMSE and R² decreased a little bit but not much, except when adding killsat15, which descreased both RMSE (went down from 2.193 to 2.026) and increased R² from 0.368 to 0.460. 
+
+And as adding more features the RMSE and R² decreased a little bit but not much, except when adding killsat15, which descreased both RMSE (went down from 2.193 to 2.026) and increased R² from 0.368 to 0.460.
+
 ```
 === Feature set: ['goldat15', 'xpat15', 'csat15', 'killsat15', 'assistsat15'] + position dummies ===
 Numeric features: ['goldat15', 'xpat15', 'csat15', 'killsat15', 'assistsat15']
@@ -832,10 +840,11 @@ So a very reasonable final model is:
     - goldat15, xpat15, csat15, killsat15, assistsat15
     + one-hot encoded position dummies (pos_jng, pos_mid, pos_sup, pos_top).
 Code skeleton for fitting that model on the full base DataFrame:
+
 ```
 final_num_feats = ["goldat15", "xpat15", "csat15", "killsat15", "assistsat15"]
 
-# one-hot encode position (same as you used in CV)
+# one-hot encode position
 pos_dummies = pd.get_dummies(base["position"], prefix="pos", drop_first=True)
 
 X_num = base[final_num_feats]
@@ -845,7 +854,7 @@ y = base["kills"]
 final_model = LinearRegression()
 final_model.fit(X_final, y)
 
-# in-sample performance (you'll also report CV metrics)
+# in-sample performance
 y_pred = final_model.predict(X_final)
 rmse_full = mean_squared_error(y, y_pred, squared=False)
 r2_full = r2_score(y, y_pred)
@@ -858,6 +867,7 @@ base["y_pred_final"] = y_pred
 base["resid_final"] = base["kills"] - base["y_pred_final"]
 base["abs_err_final"] = base["resid_final"].abs()
 ```
+
 ```
 Final model (full data) RMSE: 2.0258948889737414
 Final model (full data) R^2 : 0.4607200638178277
