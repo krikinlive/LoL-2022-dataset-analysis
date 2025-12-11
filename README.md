@@ -52,6 +52,7 @@ study_df
 | ESPORTSTMNT01_2690210 | 2022-01-10 07:44:08 | LCKC     |   2022 | Spring  |          0 |   12.01 | Blue   | mid        | BRION Challengers | oe:player:d1ae0e2f9f3ac1e0e0cdcb86504ca77 | Feisty       |         1713 |       2 |       3283 |     4556 |       81 |           0 |             1 |            0 |       5118 |     6942 |      120 |           0 |             3 |            0 |
 | ESPORTSTMNT01_2690210 | 2022-01-10 07:44:08 | LCKC     |   2022 | Spring  |          0 |   12.01 | Blue   | bot        | BRION Challengers | oe:player:998b3e49b01ecc41eacc392477a98cf | Gamin        |         1713 |       2 |       3600 |     3103 |       78 |           1 |             1 |            0 |       5461 |     4591 |      115 |           2 |             1 |            2 |
 | ESPORTSTMNT01_2690210 | 2022-01-10 07:44:08 | LCKC     |   2022 | Spring  |          0 |   12.01 | Blue   | sup        | BRION Challengers | oe:player:e9741b3a238723ea6380ef2113fae63 | Loopy        |         1713 |       1 |       2678 |     2161 |       16 |           1 |             1 |            0 |       3836 |     3588 |       28 |           1 |             2 |            2 |
+
 Another column that I constructed for myself was game_minutes to have a cleaner look on games length distribution:
 ```
 study_df['game_minutes'] = study_df['gamelength'] / 60
@@ -142,7 +143,223 @@ playername:  object 16
 ```
 
 ## Assessment of Missingness
-Before looking at the graphs and looking at the distribution I first decided to asses the missigness because I think it is important to understand what is missing and what is going on with data before looking at the graphs, trying to find patterns and making any kind of analysis. 
+Before looking at the graphs and looking at the distribution I first decided to asses the missigness because I think it is important to understand what is missing and what is going on with data before looking at the graphs, trying to find patterns and making any kind of analysis. I firstly splitted and created two lists one for numeric columns and one for categorical
+```
+cat_cols_na = [
+    "split",
+    "teamname",
+    "playerid",
+    "playername"
+]
+num_cols_na = [
+    "goldat10",
+    "xpat10",
+    "csat10",
+    "killsat10",
+    "assistsat10", 
+    "deathsat10",
+    "goldat15",
+    "xpat15",
+    "csat15",
+    "killsat15",
+    "assistsat15",
+    "deathsat15",
+    
+]
+```
+#### Missgness for Numeric Columns
+I then procceded to check my first assumption which is whether the missgness was somehow related to the position of players:
+```
+for col in num_cols_na:
+    print(col)
+    print(study_df.groupby("position")[col].apply(lambda s: s.isna().mean()))
+```
+```text
+goldat10
+position
+bot    0.15
+jng    0.15
+mid    0.15
+sup    0.15
+top    0.15
+Name: goldat10, dtype: float64
+xpat10
+position
+bot    0.15
+jng    0.15
+mid    0.15
+sup    0.15
+top    0.15
+Name: xpat10, dtype: float64
+csat10
+position
+bot    0.15
+jng    0.15
+mid    0.15
+sup    0.15
+top    0.15
+Name: csat10, dtype: float64
+killsat10
+position
+bot    0.15
+jng    0.15
+mid    0.15
+sup    0.15
+top    0.15
+Name: killsat10, dtype: float64
+assistsat10
+position
+bot    0.15
+jng    0.15
+mid    0.15
+sup    0.15
+top    0.15
+Name: assistsat10, dtype: float64
+deathsat10
+position
+bot    0.15
+jng    0.15
+mid    0.15
+sup    0.15
+top    0.15
+Name: deathsat10, dtype: float64
+goldat15
+position
+bot    0.15
+jng    0.15
+mid    0.15
+sup    0.15
+top    0.15
+Name: goldat15, dtype: float64
+xpat15
+position
+bot    0.15
+jng    0.15
+mid    0.15
+sup    0.15
+top    0.15
+Name: xpat15, dtype: float64
+csat15
+position
+bot    0.15
+jng    0.15
+mid    0.15
+sup    0.15
+top    0.15
+Name: csat15, dtype: float64
+killsat15
+position
+bot    0.15
+jng    0.15
+mid    0.15
+sup    0.15
+top    0.15
+Name: killsat15, dtype: float64
+assistsat15
+position
+bot    0.15
+jng    0.15
+mid    0.15
+sup    0.15
+top    0.15
+Name: assistsat15, dtype: float64
+deathsat15
+position
+bot    0.15
+jng    0.15
+mid    0.15
+sup    0.15
+top    0.15
+Name: deathsat15, dtype: float64
+```
+Based on this I can see that all positions have same distribution of missgness among all numeric features which gave an answer that no, missgness was not related to player's position. Also another thing that this showed was that the numeric values seem to have same distribution of missgness in them, which tells us that if we find the reason why one of the columns have it is potentially can explain why others have it too.
+Another theory that I decided to test was whether it could be due to games have no recordings for games under 10 minutes, however that also proved wrong
+```
+print(study_df["game_minutes"].describe().min()) # To check what min values are, now I want to see the games that are under 10 min
+print((study_df["game_minutes"] < 10.0).sum())
+```
+```text
+5.646077060014566
+0
+```
+So my next step was to go back to the whole csv file and just look over it myself, which proved to be the most useful. Something that I immidiatly noticed was how a lot of tournmanets, or in case of datasets leagues, sometimes simply had no information recorded on teams players except their wins, game length. The reason why it seemed obvious to me why it is happening is because of my prior experience with gaming community. I'm part of biggest gaming collegiate gaming org in the U.S called Triton Gaming that is based at UCSD. I'm part of the broadcast team and one of the things that I noticed in these small college league tournaments is how little there is information on the games themselves, simply because college students dont have either resources or just human power to record such stats, thus my next thought proccess was simply check which leagues had missgness in these numeric columns, and since all numeric values have same distribution of missgness then by finding one I can explain others.
+```
+study_df["goldat10_missing"] = study_df["goldat10"].isna()
+league_cols = study_df.groupby("league")["goldat10_missing"].mean().sort_values(ascending=False)
+list_of_league_na = list((league_cols == 1.0).index)
+list_of_league_na
+```
+what this peace of code will show is the league/tournaments which had 100% missgness for goldat10 column and the result was quite insightful
+```
+['ASCI',
+ 'DCup',
+ 'LPL',
+ 'LDL',
+ 'WLDs',
+ 'CT',
+ 'PGC',
+ 'LLA',
+ 'LMF',
+ 'CBLOLA',
+ 'LPLOL',
+ 'LVP SL',
+ 'MSI',
+ 'NEXO',
+ 'NLC',
+ 'NLC Aurora Open',
+ 'PCS',
+ 'PGN',
+ 'DDH',
+ 'PRM',
+ 'PRMP',
+ 'SL (LATAM)',
+ 'TAL',
+ 'TCL',
+ 'UL',
+ 'UPL',
+ 'USP',
+ 'VCS',
+ 'VL',
+ 'LJLA',
+ 'LJL',
+ 'LHE',
+ 'LFL2',
+ 'EBL',
+ 'EBLPA',
+ 'EL',
+ 'ESLOL',
+ 'EUM',
+ 'GL',
+ 'GLL',
+ 'GLLPA',
+ 'HC',
+ 'HM',
+ 'IC',
+ 'LAS',
+ 'LCK',
+ 'LCKC',
+ 'LCL',
+ 'LCO',
+ 'LCS',
+ 'LCSA',
+ 'CDF',
+ 'LEC',
+ 'CBLOL',
+ 'LFL']
+```
+Just in case to confirm that other features had the same list of leagues that had 100% missgness and the distribution is the same among those same features I wrote this peace of code for killsat15
+```
+#Lets double check and do the same for goldat15 and compare lists
+study_df["killsat15_missing"] = study_df["killsat15"].isna()
+league_cols_two = study_df.groupby("league")["goldat15_missing"].mean().sort_values(ascending=False)
+list_of_league_na_two = list((league_cols_two == 1.0).index)
+list_of_league_na_two == list_of_league_na
+```
+```
+True
+```
+So my final thought would be: By grouping by league, I found several leagues (ASCI, DCup, LPL, …) where the proportion of missing goldat10 is 1.0, and others where it is 0.0. The same set of leagues has complete missingness for goldat15, which suggests that early-game snapshot stats are simply not logged in those leagues. Therefore, the missingness of goldat10 (and other *at10/*at15 stats) is best described as MAR with respect to league.
+#### Missgness For Categorical Columns
 ## Hypothesis Testing
 
 ## Framing a Prediction Problem
