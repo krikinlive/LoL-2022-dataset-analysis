@@ -480,6 +480,8 @@ base.groupby("position")["kills"].describe()[["mean", "std", "25%", "50%", "75%"
     height="500"
     frameborder="0">
 </iframe>
+
+The kills are very skewed. Most players end the game with only a few kills: tallest bars are between 0-4 kills, and it drops steadily after that. Double digit kills exists but are very rare, and it seems to even have a few outliers with above 15-16 kills. This tells us that typical players have a low kill count, whule small number of players contribute to a long right tail. The variance seems quite high so prediction for outliers can be hard to achieve. And because the target column is continous but skewed regression model is the most appropriate.
 ##### Position Relation to Kills:
 - Kills vary strongly by role: bot lane averages about 4.3 kills, mid about 3.6, jungle 3.1, top 2.8, while supports average <1 kill per game.
 - The 75th percentile for bot is 6 kills, compared to only 1 kill for support, showing that supports almost never get many kills even in the upper quartile.
