@@ -1,4 +1,4 @@
-# Leauge Of Legends 2022 Data Set Analysis - How Can Early Game Features and Positions of The Players Help Us Predicit Their Final Kills
+# Leauge Of Legends 2022 Data Set Analysis - How Can Mid/Early Game Features and Positions of The Players Help Us Predicit Their Final Kills
 by: Roman Lysenko; email: rlysenko@ucsd.edu
 ## Introduction
 In this project of mine I went over dataset that is publically available by oracleselixir(oracleselixir.com) one league of legends games. The data set provides vast information on player's kills, assists, the position in each uniquly id games/tournaments. The team they are in and so on. However my main goal was to understand how much is it possible, using linear regression model, to predict player's final number of kills using only early-mid game features/information and their in-game position. I understand that league of legends is heavily team base game and so information of team's perfomance is alos can be quite influental towards player's perfomances, however I wanted to see how much is it possible to predicit using only individual features.
