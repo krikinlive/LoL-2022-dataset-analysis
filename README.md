@@ -709,11 +709,159 @@ assistsat15  corr =  0.0245,  p-value =  9.999e-05
         - Moderate r: xpat10
         - Very Weak r: assistat10, assistat15(probably due to being maninly support stat rather than the attacker/aggresive role)
     - The permutation test shows that lane assignment itself explains a chunk of kills variance beyond random noise
-    - Across 10_000 permutation replications never was observed correlations as large as the ones in the real data, yielding p_values < 10^-4 for all gold, xp, cs, and early kills features. Therefore reject null hypothesis of no relationship and conclude that early economy/perfomance stats and lane position are all meaningfully associated with how many final kills the players get by the end of the game. 
+    - Across 10_000 permutation replications never was observed correlations as large as the ones in the real data, yielding p_values < 10^-4 for all gold, xp, cs, and early kills features. Therefore reject null hypothesis of no relationship and conclude that early economy/perfomance stats and lane position are all meaningfully associated with how many final kills the players get by the end of the game.
+
 ## Framing a Prediction Problem
+##### Type: Regression
+- Prediction problem:
+    - At the 15-minute mark of a League of Legends match, predict how many kills a player will finish the game with.
+    - Response variable: kills (total kills at the end of the game).
+    - Time of prediction: 15 minutes into the game. All features we use are known by (or before) 15 minutes — e.g., lane position and mid-game stats like gold, XP, CS, kills, and assists at 15 minutes. As well as one-hot coded position columns since I found the existing correlation between the player's position and final kills.
+    - Main evaluation metric: RMSE (root mean squared error), because kills are numeric and RMSE directly measures how far our predictions are, on average, from the true kill counts in the same units. We’ll also report R² as a secondary metric to show how much variance in kills our model explains.
 
 ## Baseline Model
+##### Baseline model (≥ 2 features)
+- Conceptually:
+    - Features:
+        - Lane position (one-hot encoded)
+        - Gold at 15 minutes (goldat15)
+    - Reasoning:
+        - position alone already explained ~16–17% of the variance in kills.
+        - goldat15 had the strongest correlation with kills among numeric features and extremely small permutation p-value.
+        - Together, they form a simple but meaningful baseline that uses exactly the kind of information a coach or analyst would have at 15 minutes.
+    - The Base and Improving models will all be tested using cross-validation technique.
+The Code:
+```
+from sklearn.linear_model import LinearRegression
+from sklearn.model_selection import KFold
+from sklearn.metrics import mean_squared_error, r2_score
+# target
+y = base["kills"].to_numpy()
+```
+Helper Function
+```
+def cv_linreg_with_position(df, numeric_feats, n_splits=5, random_state=0):
+    """
+    Cross-validate a linear regression predicting kills from:
+      - numeric_feats (list of column names)
+      - one-hot position dummies (drop_first=True)
+    """
+    # numeric part
+    X_num = df[numeric_feats]
+
+    # one-hot encode position
+    pos_dummies = pd.get_dummies(df["position"], prefix="pos", drop_first=True)
+
+    # combine into one design matrix
+    X = pd.concat([X_num, pos_dummies], axis=1).to_numpy()
+    y = df["kills"].to_numpy()
+
+    kf = KFold(n_splits=n_splits, shuffle=True, random_state=random_state)
+
+    rmses = []
+    r2s = []
+
+    print(f"\n=== Feature set: {numeric_feats} + position dummies ===")
+    print("Numeric features:", numeric_feats)
+    print("Position dummies:", list(pos_dummies.columns))
+
+    for fold, (train_idx, test_idx) in enumerate(kf.split(X), start=1):
+        X_train, X_test = X[train_idx], X[test_idx]
+        y_train, y_test = y[train_idx], y[test_idx]
+
+        model = LinearRegression()
+        model.fit(X_train, y_train)
+        y_pred = model.predict(X_test)
+
+        rmse = mean_squared_error(y_test, y_pred, squared=False)
+        r2 = r2_score(y_test, y_pred)
+
+        rmses.append(rmse)
+        r2s.append(r2)
+
+        print(f"  Fold {fold}: RMSE = {rmse:.3f}, R² = {r2:.3f}")
+
+    print(f"  Mean RMSE = {np.mean(rmses):.3f} (± {np.std(rmses):.3f})")
+    print(f"  Mean R²   = {np.mean(r2s):.3f} (± {np.std(r2s):.3f})")
+
+    return np.mean(rmses), np.mean(r2s)
+```
+```
+feature_sets = [
+    (["goldat15"], "baseline_gold15+pos"), # base line or base model, next are imporvements that could help the model
+    (["goldat15", "xpat15"], "+xpat15"),
+    (["goldat15", "xpat15", "csat15"], "+csat15"),
+    (["goldat15", "xpat15", "csat15", "killsat15"], "+kills15"),
+    (["goldat15", "xpat15", "csat15", "killsat15", "assistsat15"], "+assists15"),
+]
+
+for feats, label in feature_sets:
+    print(f"\n>>> Feature set label: {label}")
+    cv_linreg_with_position(base, feats, n_splits=5, random_state=0)
+```
+And so the base line model showed these results:
+```text
+=== Feature set: ['goldat15'] + position dummies ===
+Numeric features: ['goldat15']
+Position dummies: ['pos_jng', 'pos_mid', 'pos_sup', 'pos_top']
+  Fold 1: RMSE = 2.184, R² = 0.372
+  Fold 2: RMSE = 2.182, R² = 0.369
+  Fold 3: RMSE = 2.200, R² = 0.376
+  Fold 4: RMSE = 2.209, R² = 0.369
+  Fold 5: RMSE = 2.191, R² = 0.355
+  Mean RMSE = 2.193 (± 0.010)
+  Mean R²   = 0.368 (± 0.007)
+```
+And as adding more features the RMSE and R² decreased a little bit but not much, except when adding killsat15, which descreased both RMSE (went down from 2.193 to 2.026) and increased R² from 0.368 to 0.460. 
+```
+=== Feature set: ['goldat15', 'xpat15', 'csat15', 'killsat15', 'assistsat15'] + position dummies ===
+Numeric features: ['goldat15', 'xpat15', 'csat15', 'killsat15', 'assistsat15']
+Position dummies: ['pos_jng', 'pos_mid', 'pos_sup', 'pos_top']
+  Fold 1: RMSE = 2.020, R² = 0.462
+  Fold 2: RMSE = 2.018, R² = 0.460
+  Fold 3: RMSE = 2.028, R² = 0.469
+  Fold 4: RMSE = 2.038, R² = 0.463
+  Fold 5: RMSE = 2.025, R² = 0.449
+  Mean RMSE = 2.026 (± 0.007)
+  Mean R²   = 0.460 (± 0.007)
+```
 
 ## Final Model
+So a very reasonable final model is:
+- Predict kills using:
+    - goldat15, xpat15, csat15, killsat15, assistsat15
+    + one-hot encoded position dummies (pos_jng, pos_mid, pos_sup, pos_top).
+Code skeleton for fitting that model on the full base DataFrame:
+```
+final_num_feats = ["goldat15", "xpat15", "csat15", "killsat15", "assistsat15"]
+
+# one-hot encode position (same as you used in CV)
+pos_dummies = pd.get_dummies(base["position"], prefix="pos", drop_first=True)
+
+X_num = base[final_num_feats]
+X_final = pd.concat([X_num, pos_dummies], axis=1)
+y = base["kills"]
+
+final_model = LinearRegression()
+final_model.fit(X_final, y)
+
+# in-sample performance (you'll also report CV metrics)
+y_pred = final_model.predict(X_final)
+rmse_full = mean_squared_error(y, y_pred, squared=False)
+r2_full = r2_score(y, y_pred)
+
+print("Final model (full data) RMSE:", rmse_full)
+print("Final model (full data) R^2 :", r2_full)
+
+# store residuals/errors for fairness
+base["y_pred_final"] = y_pred
+base["resid_final"] = base["kills"] - base["y_pred_final"]
+base["abs_err_final"] = base["resid_final"].abs()
+```
+```
+Final model (full data) RMSE: 2.0258948889737414
+Final model (full data) R^2 : 0.4607200638178277
+```
 
 ## Fairness Analysis
+
