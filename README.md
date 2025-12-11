@@ -599,8 +599,117 @@ for col in feature_cols:
 - Interpretation:
     - Early kills seem to have strong relationship with final kill(the more kills you get early the bigger advantage is), while early assists are positively associated but much weaker, especially for the support role due to it being less of the agressive/attack role. 
 
+Now It is time to explain why I mostly show features at15* mark. This is due to the distribution of kills in general and how the game works in general. A lot of actions that happen during the game start happening around mark of 15 minutes, before that players tend to spend a lot of time farming gold and other stuff depending on their position and avoid fighting, thus not a lot infromation can be told to the model during first 10 minutes, thus I shifted my focus more on the mid game features.
 ## Hypothesis Testing
+First I will be doing hypothesis testing on the position's relation to the kills which I one-hot coded in order to be able to use it for the regression model.
+##### Position Hypothesis
+- I decide to test whether the position affects the kills and here is my null and alternative hypothesis:
+    - H₀: Kills are independent of position (all roles have the same mean kills).
+    - H₁: At least one role has a different mean kills.
+```
+def r2_from_design(X, y):
+    # least squares solution
+    beta, *_ = np.linalg.lstsq(X, y, rcond=None)
+    y_hat = X @ beta
+    ss_res = ((y - y_hat) ** 2).sum()
+    ss_tot = ((y - y.mean()) ** 2).sum()
+    return 1 - ss_res / ss_tot
 
+rng = np.random.default_rng(0)
+
+
+pos_dummies = pd.get_dummies(base["position"], prefix="pos", drop_first=True)
+# columns will be like: pos_bot, pos_jng, pos_mid, pos_sup
+
+X = pos_dummies.to_numpy()
+y = base["kills"].to_numpy()
+
+X_design = np.column_stack([np.ones(len(X)), X])
+
+obs_r2 = r2_from_design(X_design, y)
+print("Observed R² (kills ~ position dummies):", obs_r2)
+
+# build null distribution by breaking the relationship between kills and position
+reps = 2000
+null_r2 = np.empty(reps)
+
+for i in range(reps):
+    y_perm = rng.permutation(y)  # shuffle kills, keep positions fixed
+    null_r2[i] = r2_from_design(X_design, y_perm)
+
+# one-sided p-value: do positions explain more variance than we'd expect by chance?
+p_value = np.mean(null_r2 >= obs_r2)
+print("Permutation p-value:", p_value)
+```
+```text
+Observed R² (kills ~ position dummies): 0.16632020766961886
+Permutation p-value: 0.0
+```
+Small P value which below 0.01 and since R^2 is ~0.166 inidicates that we reject null hypothesis and cannot say that position has no relationship to the player's kills.
+Now I'm going to do Hypothesis testing for my *at10 and *at15 minute early features with general idea for each column X. Clean way to do hypothesis tests for these features is a permutation test on the correlation between each feature and kills.
+- H₀: kills and X are independent (true correlation = 0).
+- H₁: kills and X are associated (correlation ≠ 0)
+```
+Helper Function
+def perm_corr_pvalue(df, x_col, y_col="kills", reps=2000, seed=0):
+    """
+    Permutation test for correlation between x_col and y_col.
+
+    Returns (observed_correlation, p_value).
+    """
+    rng = np.random.default_rng(seed)
+
+    x = df[x_col].to_numpy()
+    y = df[y_col].to_numpy()
+    obs_corr = np.corrcoef(x, y)[0, 1]
+
+    # null distribution: break relationship by shuffling y
+    null_corr = np.empty(reps)
+    for i in range(reps):
+        y_perm = rng.permutation(y)
+        null_corr[i] = np.corrcoef(x, y_perm)[0, 1]
+
+    # two-sided p-value
+    count = np.sum(np.abs(null_corr) >= abs(obs_corr))
+    p_value = (count + 1) / (reps + 1)
+
+    return obs_corr, p_value
+```
+```
+cols_to_test = [
+    "goldat10", "xpat10", "csat10", "killsat10", "assistsat10",
+    "goldat15", "xpat15", "csat15", "killsat15", "assistsat15",
+]
+
+for col in cols_to_test:
+    corr, p = perm_corr_pvalue(base, col, y_col="kills", reps=10000, seed=0)
+    print(f"{col:10s}  corr = {corr: .4f},  p-value = {p: .4g}")
+```
+Results:
+```text
+goldat10    corr =  0.5287,  p-value =  9.999e-05
+xpat10      corr =  0.2307,  p-value =  9.999e-05
+csat10      corr =  0.3659,  p-value =  9.999e-05
+killsat10   corr =  0.4470,  p-value =  9.999e-05
+assistsat10  corr =  0.0156,  p-value =  9.999e-05
+goldat15    corr =  0.5880,  p-value =  9.999e-05
+xpat15      corr =  0.2966,  p-value =  9.999e-05
+csat15      corr =  0.3728,  p-value =  9.999e-05
+killsat15   corr =  0.5870,  p-value =  9.999e-05
+assistsat15  corr =  0.0245,  p-value =  9.999e-05
+```
+##### Permutation Test Results and One-Hot on the Position
+- [ goldat10 ≈ 0.53, goldat15 ≈ 0.59, killsat10 ≈ 0.45, killsat15 ≈ 0.59, csat10 ≈ 0.37, csat15 ≈ 0.37, xpat10 ≈ 0.23, xpat15 ≈ 0.30, assistsat10 ≈ 0.02, assistsat15 ≈ 0.02, All p-values < 1×10⁻⁴ (permutation floor) ]
+- Observed R^2 for position was ≈  0.166
+- Conclusions:
+    - For features such as gold,xp,cs, and early kills we have strong evidence to reject the null hypothesis, as tests show that stats are definitely have strong association with final kills - very hard to obtain these stats by simple sampling.
+    - Breakdown of the Realtionships
+        - Very Strong r: goldat15, killsat15
+        - Strong r: goldat10, killsat10, csat10, csat15, xpat15
+        - Moderate r: xpat10
+        - Very Weak r: assistat10, assistat15(probably due to being maninly support stat rather than the attacker/aggresive role)
+    - The permutation test shows that lane assignment itself explains a chunk of kills variance beyond random noise
+    - Across 10_000 permutation replications never was observed correlations as large as the ones in the real data, yielding p_values < 10^-4 for all gold, xp, cs, and early kills features. Therefore reject null hypothesis of no relationship and conclude that early economy/perfomance stats and lane position are all meaningfully associated with how many final kills the players get by the end of the game. 
 ## Framing a Prediction Problem
 
 ## Baseline Model
