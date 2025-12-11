@@ -64,6 +64,7 @@ study_df['game_minutes']
 |          28.55 |
 |          28.55 |
 |          28.55 |
+
 Next I checked that all numeric columns are numeric types and how much data it is missing
 ```
 #Check if these columns are numeric as they should be and also discover which one has missing values
@@ -97,6 +98,7 @@ for col in num_cols:
     print(col + ": ", study_df[col].dtype, study_df[col].isna().sum())
 ```
 And this is the result I got:
+```text
 kills:  int64 0
 gamelength:  int64 0
 goldat10:  float64 18930
@@ -113,6 +115,7 @@ assistsat15:  float64 18930
 deathsat15:  float64 18930
 year:  int64 0
 playoffs:  int64 0
+```
 
 Then I did the same for categorical columns:
 ```
@@ -128,6 +131,7 @@ cat_cols = [
 for col in cat_cols:
     print(col + ": ", study_df[col].dtype, study_df[col].isna().sum())
 ```
+```text
 side:  object 0
 position:  object 0
 league:  object 0
@@ -135,6 +139,7 @@ split:  object 34910
 teamname:  object 45
 playerid:  object 2209
 playername:  object 16
+```
 
 ## Assessment of Missingness
 Before looking at the graphs and looking at the distribution I first decided to asses the missigness because I think it is important to understand what is missing and what is going on with data before looking at the graphs, trying to find patterns and making any kind of analysis. 
