@@ -455,6 +455,18 @@ Columns in base: 29
 | 2022-01-10 07:44:08 | LCKC     |   2022 | Spring  |          0 |   12.01 | Blue   | sup        |         1713 |       1 |       2678 |     2161 |       16 |           1 |             1 |            0 |       3836 |     3588 |       28 |           1 |             2 |            2 |          28.55 | False              | False              | False               | False              | False              | False                |
 #### Distribution and Histograms
 I'll be going over couple of the distributions I consider to be the most important from this graphs however the full list of all histograms you can find the folder called "assets" in the main repo. The first distribution I'll be looking at is the distribution of game_minutes and by looking at it it seems it was correct to assume that most of the games in LoL matches last around 30-35 minutes with very few last longer(around 40-50 do happen but rarely). Thus it seems appropriate to say that early game features at10 and midgame at 15.
+The Code that I used to print out the histograms such as game_minutes but also other features:
+```
+fig_time = px.histogram(
+        base,
+        x=study_df['game_minutes'],
+        nbins=30,
+        title=f"Distribution of game_minutes",
+        labels={col: "game_minutes", "count": "Number of player-games"},
+    )
+fig_time.write_html(f"assets/hist_game_minutes.html", include_plotlyjs="cdn")
+fig_time.show()
+```
 <iframe
     src="assets/hist_game_minutes.html"
     width="800"
@@ -518,6 +530,42 @@ The kills are very skewed. Most players end the game with only a few kills: tall
     - The CS distributions are multi-modal, hinting that roles have systematically different farming patterns. This motivates stratifying by
 - Kills (killsat15)
     - Heavily right-skewed, majority of players have almost no kills and a good chunk have around 1-2 kills with much smaller percentage 3-4 kills, and some outliers have 5-6 kills.
+##### Scatter Plots
+The one I found out to have the biggest correlation are goldat15 and killsat15 with final kills which makes sense because the more gold and kills the player have the higher the chances of him having successfull kill as well as their position correlation to the final kills. 
+```
+base.groupby("position")["kills"].describe()[["mean", "std", "25%", "50%", "75%"]]
+```
+|     mean |     std |   25% |   50% |   75% |
+|---------:|--------:|------:|------:|------:|
+| 4.25788  | 3.24725 |     2 |     4 |     6 |
+| 3.09455  | 2.52282 |     1 |     3 |     4 |
+| 3.55021  | 2.76407 |     1 |     3 |     5 |
+| 0.895927 | 1.15068 |     0 |     1 |     1 |
+| 2.79931  | 2.41912 |     1 |     2 |     4 |
+
+This table shows that on average bot lane have stronger differences bots ~ 4.3 kills on average while sup ~ 0.9, which indicates potential relation between player's position and final kills which we will later test in Hypothesis Testing.
+The Code that was used for scatter plots:
+```
+for col in feature_cols:
+    fig = px.scatter(
+        base,
+        x=col,
+        y=target,
+        color="position",
+        opacity=0.4,
+        title=f"{target} vs {col}",
+        labels={col: col, target: "Kills"},
+        trendline="ols",
+    )
+    fig.write_html(f"assets/kills_vs_{col}.html", include_plotlyjs="cdn")
+    fig.show()
+```
+<iframe
+    src="assets/kills_vs_killsat15.html"
+    width="800"
+    height="500"
+    frameborder="0">
+</iframe>
 ## Hypothesis Testing
 
 ## Framing a Prediction Problem
