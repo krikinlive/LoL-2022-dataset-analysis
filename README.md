@@ -566,6 +566,38 @@ for col in feature_cols:
     height="500"
     frameborder="0">
 </iframe>
+<iframe
+    src="assets/kills_vs_goldat15.html"
+    width="800"
+    height="500"
+    frameborder="0">
+</iframe>
+<iframe
+    src="assets/kills_vs_xpat15.html"
+    width="800"
+    height="500"
+    frameborder="0">
+</iframe>
+##### Early gold & XP vs kills
+- kills vs goldat10 / goldat15
+    - Clear positive relationship: players with more early gold tend to end the game with more kills.
+    - Lines by position:
+        - Bot and mid have the steepest lines → extra gold converts into more kills for them.
+        - Support has the flattest line → supports can get gold without getting many kills themselves.
+- kills vs xpat15
+    - Similarity: more early XP → more kills.
+     - Mid and bot again tend to sit higher (more kills for the same XP).
+    - Top/support sit lower; jungle is in between.
+- Interpretation:
+    - Early-game resource leads(gold/XP) are moderately positively associated with final kills, and this effect is strongest for damage focused roles (mid, bot).
+#### Early kills/assists vs total kills
+- kills vs killsat10 / killsat15
+    - Almost linear trend: more early kills → many more total kills.
+    - It is shown to be one of the strongest relationship visually on graphs
+    - Lines by position: bot and mid have the highest lines, support the lowest.
+- Interpretation:
+    - Early kills seem to have strong relationship with final kill(the more kills you get early the bigger advantage is), while early assists are positively associated but much weaker, especially for the support role due to it being less of the agressive/attack role. 
+
 ## Hypothesis Testing
 
 ## Framing a Prediction Problem
