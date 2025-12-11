@@ -875,6 +875,7 @@ Final model (full data) R^2 : 0.4607200638178277
 
 ## Fairness Analysis
 - Because my model uses position as an input feature, I decided to check whether it makes systematically larger errors for some roles than for others. The tests I did were Compute mean absolute error (MAE) by position
+
 | position   |   count |    mean |   median |
 |:-----------|--------:|--------:|---------:|
 | sup        |   21312 | 0.63601 | 0.496026 |
