@@ -874,4 +874,99 @@ Final model (full data) R^2 : 0.4607200638178277
 ```
 
 ## Fairness Analysis
+- Because my model uses position as an input feature, I decided to check whether it makes systematically larger errors for some roles than for others. The tests I did were Compute mean absolute error (MAE) by position
+| position   |   count |    mean |   median |
+|:-----------|--------:|--------:|---------:|
+| sup        |   21312 | 0.63601 | 0.496026 |
+| jng        |   21312 | 1.39733 | 1.20452  |
+| top        |   21312 | 1.56843 | 1.3518   |
+| mid        |   21312 | 1.78454 | 1.54     |
+| bot        |   21312 | 2.12308 | 1.89904  |
 
+What this shows is that sup role has higher accuracy than the rest of the roles, especially bot lanes which previous tests showed to have, on average, higher amount of final kills.To quantify these tests I decided to run two tests: Global Fairness Test and Pairwise(bot vs support)
+
+##### Global Permutation
+
+```
+def stat_err_by_position(df, err_col="abs_err_final", group_col="position"):
+    """Test statistic: range of mean absolute error across positions."""
+    means = df.groupby(group_col)[err_col].mean()
+    return means.max() - means.min()
+# observed statistic
+obs_stat = stat_err_by_position(base, err_col="abs_err_final", group_col="position")
+print("Observed T (range of MAE across positions):", obs_stat)
+
+# permutation test
+reps = 5000
+rng = np.random.default_rng(0)
+null_stats = np.empty(reps)
+
+for i in range(reps):
+    shuffled = rng.permutation(base["position"].values)
+    tmp = base.copy()
+    tmp["position_shuffled"] = shuffled
+    null_stats[i] = stat_err_by_position(tmp,
+                                         err_col="abs_err_final",
+                                         group_col="position_shuffled")
+
+p_value_global = np.mean(null_stats >= obs_stat)
+print("Global fairness permutation p-value:", p_value_global)
+```
+
+```
+Observed T (range of MAE across positions): 1.4870657399464358
+Global fairness permutation p-value: 0.0
+```
+
+##### Pairwise permutation test
+
+```
+   def perm_diff_mae(df, g1, g2,
+                  group_col="position", err_col="abs_err_final",
+                  reps=5000, seed=0):
+    rng = np.random.default_rng(seed)
+    
+    # keep only the two groups
+    sub = df[df[group_col].isin([g1, g2])][[group_col, err_col]].copy()
+    
+    # observed difference: MAE(g1) - MAE(g2)
+    obs = (sub.loc[sub[group_col] == g1, err_col].mean() -
+           sub.loc[sub[group_col] == g2, err_col].mean())
+    
+    null_diffs = np.empty(reps)
+    for i in range(reps):
+        shuffled = rng.permutation(sub[group_col].values)
+        null_diffs[i] = (sub.loc[shuffled == g1, err_col].mean() -
+                         sub.loc[shuffled == g2, err_col].mean())
+    
+    # two-sided p-value
+    p_val = np.mean(np.abs(null_diffs) >= np.abs(obs))
+    return obs, p_val
+
+obs_diff_bot_sup, p_bot_sup = perm_diff_mae(base, "bot", "sup")
+print("Observed MAE(bot) - MAE(sup):", obs_diff_bot_sup)
+print("Permutation p-value (bot vs sup):", p_bot_sup)
+```
+
+```text
+Observed MAE(bot) - MAE(sup): 1.4870657399464358
+Permutation p-value (bot vs sup): 0.0
+```
+
+##### Final Analysis:
+- I looked at error parity by positio that is - does the model make predictions with roughly same accuracy for each of the role? Since I found that the position/role has quite strong correlation/affect on the final kills. To measure that I used MAE of the final model's prediction.
+- These showed that model is much more accurate for supports and least for bot and mid, with spread of about 1.49 kills between the best/worst roles.
+- Next I did Global Permutation Test with null hypothesis:
+    - Null: The mean absolute error is the same for all positions(any difference are due random variation)
+    - Observed Stat T_obs ~ 1.49 kills and using 5000 permutation by shuffling positions and keeping labels the permutation p-value essentially 0
+    - Conclusion: Reject null hypothesis and it shows that the difference in MAE across psoition are far larger than I would expect by chance, so error is clearly role based
+- Pairwise Test:
+    -  Because bot and support looked like extremes I decided to do pairwise permutation test and compare their MAEs
+    -  Observed difference ~ 1.49 kills
+    -  Permutation p value was < 0.0000~
+    -  Conculsion: THe gap in the accurace between bot and supp lane is statistically significant and couldnt happen due to random chance
+- Overall Takeaway
+    - Under the error-parity, my final model does not seem to be fair across positions
+    - Much more accurate for supports and noticeably better for jungle/top than for mid and especially bot lane.
+    - The roles who often end up having higer killer counts receive systematically larger error
+    - So in the later work what I wish to adress is train separate models per position or somehow include interaction terms. Or somehow reweight the loss so that high-error groups such as bot and mid are given more *importance* during training. Also to find out if that was caused due to bit missgness in a lot of tournaments that simply had not data.
